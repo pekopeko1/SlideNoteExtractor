@@ -48,9 +48,14 @@ func main() {
 	outputFile := flag.String("output", "", "出力テキストファイルのパス")
 	flag.Parse()
 
-	// 入力ファイルと出力ファイルの確認
-	if *inputFile == "" || *outputFile == "" {
-		log.Fatalf("入力ファイルおよび出力ファイルを指定してください")
+	// 入力ファイルが指定されているか確認
+	if *inputFile == "" {
+		log.Fatalf("入力ファイルを指定してください")
+	}
+
+	// outputが指定されていない場合、.pptxの拡張子を.txtに変更したファイル名にする
+	if *outputFile == "" {
+		*outputFile = strings.TrimSuffix(*inputFile, filepath.Ext(*inputFile)) + ".txt"
 	}
 
 	// ZIPファイル (pptx) を開く
