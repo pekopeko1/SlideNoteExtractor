@@ -13,17 +13,21 @@ import (
 )
 
 // PowerPointのNotesのテキストを格納する構造体
-type NotesText struct {
-	XMLName    xml.Name    `xml:"txBody"`
-	Paragraphs []Paragraph `xml:"p"`
+type NotesSlide struct {
+	XMLName xml.Name `xml:"notes"`
+	TxBody  TxBody   `xml:"txBody"`
+}
+
+type TxBody struct {
+	Paragraphs []Paragraph `xml:"a:p"`
 }
 
 type Paragraph struct {
-	TextRuns []TextRun `xml:"r"`
+	TextRuns []TextRun `xml:"a:r"`
 }
 
 type TextRun struct {
-	Text string `xml:"t"`
+	Text string `xml:"a:t"`
 }
 
 func main() {
@@ -63,7 +67,7 @@ func main() {
 			defer rc.Close()
 
 			// XMLをパース
-			notesText, err := extractNotesFromXML(rc)
+			notesSlide, err := extractNotesFromXML(rc)
 			if err != nil {
 				log.Printf("ノートの抽出に失敗しました: %v", err)
 				continue
@@ -71,7 +75,8 @@ func main() {
 
 			// 抽出したノートを出力ファイルに書き込み
 			fmt.Fprintf(out, "ノートスライド %s:\n", filepath.Base(f.Name))
-			for _, p := range notesText.Paragraphs {
+			for _, p := range notesSlide.TxBody.Paragraphs {
+				log.Printf("%v", notesSlide.TxBody)
 				for _, r := range p.TextRuns {
 					if r.Text != "" {
 						fmt.Fprintf(out, "%s\n", r.Text)
@@ -86,12 +91,12 @@ func main() {
 }
 
 // XMLからNotesのテキストを抽出
-func extractNotesFromXML(reader io.Reader) (*NotesText, error) {
+func extractNotesFromXML(reader io.Reader) (*NotesSlide, error) {
 	decoder := xml.NewDecoder(reader)
-	var notes NotesText
-	err := decoder.Decode(&notes)
+	var notesSlide NotesSlide
+	err := decoder.Decode(&notesSlide)
 	if err != nil {
 		return nil, err
 	}
-	return &notes, nil
+	return &notesSlide, nil
 }
