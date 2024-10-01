@@ -88,10 +88,13 @@ func main() {
 			fmt.Fprintf(out, "ノートスライド %s:\n", filepath.Base(f.Name))
 			for _, shape := range notesSlide.CSld.SpTree.Shapes {
 				for _, p := range shape.TxBody.Paragraphs {
+					var paragraphText string
+					// 同じParagraph内のテキストを結合
 					for _, r := range p.TextRuns {
-						if r.Text != "" {
-							fmt.Fprintf(out, "%s\n", r.Text)
-						}
+						paragraphText += r.Text
+					}
+					if paragraphText != "" {
+						fmt.Fprintf(out, "%s\n", paragraphText)
 					}
 				}
 			}
