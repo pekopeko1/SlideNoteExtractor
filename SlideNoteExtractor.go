@@ -15,19 +15,31 @@ import (
 // PowerPointのNotesのテキストを格納する構造体
 type NotesSlide struct {
 	XMLName xml.Name `xml:"notes"`
-	TxBody  TxBody   `xml:"txBody"`
+	CSld    CSld     `xml:"cSld"`
+}
+
+type CSld struct {
+	SpTree SpTree `xml:"spTree"`
+}
+
+type SpTree struct {
+	Shapes []Shape `xml:"sp"`
+}
+
+type Shape struct {
+	TxBody TxBody `xml:"txBody"`
 }
 
 type TxBody struct {
-	Paragraphs []Paragraph `xml:"a:p"`
+	Paragraphs []Paragraph `xml:"p"`
 }
 
 type Paragraph struct {
-	TextRuns []TextRun `xml:"a:r"`
+	TextRuns []TextRun `xml:"r"`
 }
 
 type TextRun struct {
-	Text string `xml:"a:t"`
+	Text string `xml:"t"`
 }
 
 func main() {
@@ -59,7 +71,6 @@ func main() {
 	for _, f := range r.File {
 		// ノートスライド (notesSlideN.xml) のファイルを探す
 		if strings.HasPrefix(f.Name, "ppt/notesSlides/notesSlide") && strings.HasSuffix(f.Name, ".xml") {
-			fmt.Printf("ノートスライドを処理しています: %s\n", f.Name)
 			rc, err := f.Open()
 			if err != nil {
 				log.Fatalf("ファイルを開けませんでした: %v", err)
@@ -75,11 +86,12 @@ func main() {
 
 			// 抽出したノートを出力ファイルに書き込み
 			fmt.Fprintf(out, "ノートスライド %s:\n", filepath.Base(f.Name))
-			for _, p := range notesSlide.TxBody.Paragraphs {
-				log.Printf("%v", notesSlide.TxBody)
-				for _, r := range p.TextRuns {
-					if r.Text != "" {
-						fmt.Fprintf(out, "%s\n", r.Text)
+			for _, shape := range notesSlide.CSld.SpTree.Shapes {
+				for _, p := range shape.TxBody.Paragraphs {
+					for _, r := range p.TextRuns {
+						if r.Text != "" {
+							fmt.Fprintf(out, "%s\n", r.Text)
+						}
 					}
 				}
 			}
@@ -94,9 +106,28 @@ func main() {
 func extractNotesFromXML(reader io.Reader) (*NotesSlide, error) {
 	decoder := xml.NewDecoder(reader)
 	var notesSlide NotesSlide
-	err := decoder.Decode(&notesSlide)
-	if err != nil {
-		return nil, err
+
+	// XMLのパース処理
+	for {
+		tok, err := decoder.Token()
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			return nil, err
+		}
+
+		// XMLトークンを確認しながら処理
+		switch elem := tok.(type) {
+		case xml.StartElement:
+			// ノートスライドにマッチした場合、構造体にデコード
+			if elem.Name.Local == "notes" {
+				err = decoder.DecodeElement(&notesSlide, &elem)
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
 	}
+
 	return &notesSlide, nil
 }
